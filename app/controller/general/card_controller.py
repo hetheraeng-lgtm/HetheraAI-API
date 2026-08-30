@@ -4,7 +4,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.config import app_settings
 from app.config.database import get_db
 from app.repository.user_repository import UserRepository
-from app.schema.common import ApiResponse
+from app.schema.common import ApiResponse, ChatIdPath
 from app.schema.transaction import (
     CardInitializeRequest,
     CardInitializeResponse,
@@ -43,10 +43,10 @@ def _get_card_service(
     description="Generate a Paystack authorization URL. The user visits it to save a card.",
 )
 async def initialize_card(
+    chat_id: ChatIdPath,
     payload: CardInitializeRequest,
     service: CardService = Depends(_get_card_service),
     session: AsyncSession = Depends(get_db),
-    chat_id: str = Path(..., example="08119995541"),
 ) -> ApiResponse[CardInitializeResponse]:
     user = await UserRepository(session).get_by_chat_id(chat_id)
 
@@ -75,7 +75,7 @@ async def initialize_card(
     description="Get the saved card for a user.",
 )
 async def get_card(
-    chat_id: str = Path(..., example="08119995541"),
+    chat_id: ChatIdPath,
     service: CardService = Depends(_get_card_service),
     session: AsyncSession = Depends(get_db),
 ) -> ApiResponse[CardResponse | None]:
@@ -102,7 +102,7 @@ async def get_card(
     description="Remove the saved card.",
 )
 async def delete_card(
-    chat_id: str = Path(..., example="08119995541"),
+    chat_id: ChatIdPath,
     service: CardService = Depends(_get_card_service),
     session: AsyncSession = Depends(get_db),
 ) -> ApiResponse[None]:

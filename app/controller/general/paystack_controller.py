@@ -52,7 +52,7 @@ from app.repository.transaction_repository import (
 async def paystack_webhook(
     request: Request,
     x_paystack_signature: str = Header(
-        default="", alias="x-paystack-signature", example=_EXAMPLE_SIGNATURE
+        default="", alias="x-paystack-signature", examples=[_EXAMPLE_SIGNATURE]
     ),
     service: CardService = Depends(_get_card_service),
     session: AsyncSession = Depends(get_db),

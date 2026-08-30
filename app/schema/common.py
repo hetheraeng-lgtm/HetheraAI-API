@@ -5,10 +5,10 @@ from pydantic import BaseModel
 
 T = TypeVar("T")
 
-ChatIdPath = Annotated[str, Path(example="08119995541")]
-AirtimeServiceIdPath = Annotated[str, Path(example="glo")]
-MobileDataServiceIdPath = Annotated[str, Path(example="glo-data")]
-CableServiceIdPath = Annotated[str, Path(example="gotv")]
+ChatIdPath = Annotated[str, Path(examples=["08119995541"])]
+AirtimeServiceIdPath = Annotated[str, Path(examples=["glo"])]
+MobileDataServiceIdPath = Annotated[str, Path(examples=["glo-data"])]
+CableServiceIdPath = Annotated[str, Path(examples=["gotv"])]
 
 CABLE_PROVIDERS = frozenset({"dstv", "gotv", "startimes"})
 
