@@ -9,9 +9,7 @@ from app.model.transaction import Transaction
 from app.service.transaction_service import TransactionService
 from app.utils.libs.vtpass.interfaces import BuyAirtimeData
 from app.utils.libs.vtpass.service import VtpassService
-from app.utils.phone import validate_nigerian_phone
-
-_AIRTIME_PROVIDERS = frozenset({"mtn", "airtel", "glo", "etisalat", "9mobile"})
+from app.schema.common import AIRTIME_PROVIDERS
 
 
 class AirtimeService:
@@ -22,7 +20,7 @@ class AirtimeService:
         self.tx_service = TransactionService(session)
 
     def providers(self) -> list[str]:
-        return sorted(_AIRTIME_PROVIDERS)
+        return sorted(AIRTIME_PROVIDERS)
 
     async def purchase(
         self,
@@ -33,10 +31,10 @@ class AirtimeService:
         idempotency_key: str,
         paystack,
     ) -> Transaction:
-        if service_id not in _AIRTIME_PROVIDERS:
+        if service_id not in AIRTIME_PROVIDERS:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"Unsupported provider. Supported: {sorted(_AIRTIME_PROVIDERS)}",
+                detail=f"Unsupported provider. Supported: {sorted(AIRTIME_PROVIDERS)}",
             )
 
         vtpass = self.vtpass

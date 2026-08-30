@@ -6,22 +6,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.enums.transaction import TransactionType
 from app.model.transaction import Transaction
+from app.schema.common import DATA_PROVIDERS
 from app.service.transaction_service import TransactionService
 from app.utils.libs.vtpass.interfaces import BuyMobileDataData
 from app.utils.libs.vtpass.service import VtpassService
 from app.utils.phone import validate_nigerian_phone
-
-_DATA_PROVIDERS = frozenset(
-    {
-        "mtn-data",
-        "airtel-data",
-        "glo-data",
-        "etisalat-data",
-        "9mobile-data",
-        "smile-direct",
-        "spectranet",
-    }
-)
 
 
 class MobileDataService:
@@ -32,13 +21,13 @@ class MobileDataService:
         self.tx_service = TransactionService(session)
 
     def providers(self) -> list[str]:
-        return sorted(_DATA_PROVIDERS)
+        return sorted(DATA_PROVIDERS)
 
     async def get_variation_codes(self, service_id: str) -> dict:
-        if service_id not in _DATA_PROVIDERS:
+        if service_id not in DATA_PROVIDERS:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"Unsupported data provider. Supported: {sorted(_DATA_PROVIDERS)}",
+                detail=f"Unsupported data provider. Supported: {sorted(DATA_PROVIDERS)}",
             )
         return await self.vtpass.get_variation_codes(service_id)
 
@@ -51,10 +40,10 @@ class MobileDataService:
         idempotency_key: str,
         paystack,
     ) -> Transaction:
-        if service_id not in _DATA_PROVIDERS:
+        if service_id not in DATA_PROVIDERS:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"Unsupported data provider. Supported: {sorted(_DATA_PROVIDERS)}",
+                detail=f"Unsupported data provider. Supported: {sorted(DATA_PROVIDERS)}",
             )
         phone = validate_nigerian_phone(phone)
         if not variation_code:

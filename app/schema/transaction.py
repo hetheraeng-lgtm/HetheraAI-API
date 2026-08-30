@@ -1,6 +1,12 @@
 from typing import Optional
 import uuid
-from app.schema.common import CABLE_PROVIDERS, ELECTRICITY_PROVIDERS
+from app.schema.common import (
+    ALL_PROVIDERS,
+    AIRTIME_PROVIDERS,
+    CABLE_PROVIDERS,
+    ELECTRICITY_PROVIDERS,
+    DATA_PROVIDERS,
+)
 from datetime import datetime
 from decimal import Decimal
 from uuid import uuid4
@@ -8,6 +14,12 @@ from uuid import uuid4
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from app.enums.transaction import TransactionStatus, TransactionType
+from app.schema.common import (
+    AIRTIME_PROVIDERS,
+    DATA_PROVIDERS,
+    CABLE_PROVIDERS,
+    ELECTRICITY_PROVIDERS,
+)
 from app.utils.phone import validate_nigerian_phone
 
 
@@ -37,6 +49,16 @@ class AirtimePurchaseRequest(BaseModel):
     def validate_phone(cls, v: str) -> str:
         return validate_nigerian_phone(v)
 
+    @field_validator("service_id", mode="before")
+    @classmethod
+    def validate_service_id(cls, v: str) -> str:
+        v = v.lower().strip()
+        if v not in AIRTIME_PROVIDERS:
+            raise ValueError(
+                f"service_id must be one of: {', '.join(AIRTIME_PROVIDERS)}"
+            )
+        return v
+
 
 class MobileDataPurchaseRequest(BaseModel):
     service_id: str = Field(min_length=1, max_length=50, examples=["glo-data"])
@@ -48,6 +70,14 @@ class MobileDataPurchaseRequest(BaseModel):
     @classmethod
     def validate_phone(cls, v: str) -> str:
         return validate_nigerian_phone(v)
+
+    @field_validator("service_id", mode="before")
+    @classmethod
+    def validate_service_id(cls, v: str) -> str:
+        v = v.lower().strip()
+        if v not in DATA_PROVIDERS:
+            raise ValueError(f"service_id must be one of: {', '.join(DATA_PROVIDERS)}")
+        return v
 
 
 class CablePurchaseRequest(BaseModel):
@@ -161,16 +191,40 @@ class CardResponse(BaseModel):
 
 
 class BeneficiaryCreateRequest(BaseModel):
-    name: str = Field(min_length=1, max_length=100)
-    identifier: str = Field(min_length=1, max_length=100)
-    service_type: str = Field(min_length=1, max_length=50)
-    service_id: str = Field(min_length=1, max_length=50)
+    name: str = Field(min_length=1, max_length=100, examples=["Mom"])
+    identifier: str = Field(min_length=1, max_length=100, examples=["08109955312"])
+    service_type: str = Field(min_length=1, max_length=50, examples=["airtime"])
+    service_id: str = Field(min_length=1, max_length=50, examples=["mtn"])
+
+    @field_validator("service_id", mode="before")
+    @classmethod
+    def validate_service_id(cls, v: str) -> str:
+        v = v.lower().strip()
+        if v not in ALL_PROVIDERS:
+            raise ValueError(f"service_id must be one of: {', '.join(ALL_PROVIDERS)}")
+        return v
 
 
 class BeneficiaryUpdateRequest(BaseModel):
-    name: str | None = Field(default=None, min_length=1, max_length=100)
-    identifier: str | None = Field(default=None, min_length=1, max_length=100)
-    service_id: str | None = Field(default=None, min_length=1, max_length=50)
+    name: str | None = Field(
+        default=None, min_length=1, max_length=100, examples=["Mommy"]
+    )
+    identifier: str | None = Field(
+        default=None, min_length=1, max_length=100, examples=["08109955312"]
+    )
+    service_id: str | None = Field(
+        default=None, min_length=1, max_length=50, examples=["mtn-data"]
+    )
+
+    @field_validator("service_id", mode="before")
+    @classmethod
+    def validate_service_id(cls, v: str) -> str:
+        if v is None:
+            return v
+        v = v.lower().strip()
+        if v not in ALL_PROVIDERS:
+            raise ValueError(f"service_id must be one of: {', '.join(ALL_PROVIDERS)}")
+        return v
 
 
 class BeneficiaryResponse(BaseModel):

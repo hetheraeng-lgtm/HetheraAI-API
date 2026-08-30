@@ -10,6 +10,20 @@ AirtimeServiceIdPath = Annotated[str, Path(examples=["glo"])]
 MobileDataServiceIdPath = Annotated[str, Path(examples=["glo-data"])]
 CableServiceIdPath = Annotated[str, Path(examples=["gotv"])]
 
+AIRTIME_PROVIDERS = frozenset({"mtn", "airtel", "glo", "etisalat", "9mobile"})
+
+DATA_PROVIDERS = frozenset(
+    {
+        "mtn-data",
+        "airtel-data",
+        "glo-data",
+        "etisalat-data",
+        "9mobile-data",
+        "smile-direct",
+        "spectranet",
+    }
+)
+
 CABLE_PROVIDERS = frozenset({"dstv", "gotv", "startimes"})
 
 ELECTRICITY_PROVIDERS = frozenset(
@@ -29,6 +43,9 @@ ELECTRICITY_PROVIDERS = frozenset(
     }
 )
 
+ALL_PROVIDERS: frozenset[str] = (
+    AIRTIME_PROVIDERS | DATA_PROVIDERS | CABLE_PROVIDERS | ELECTRICITY_PROVIDERS
+)
 
 ELECTRICITY_PROVIDER_LABELS: dict[str, str] = {
     "IKEDC": "ikeja-electric",
