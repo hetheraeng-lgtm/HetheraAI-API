@@ -14,6 +14,7 @@ from app.controller.admin.admin_controller import (
     auth_router as admin_auth_router,
 )
 from app.controller.general.user_controller import auth_router as user_auth_router
+from app.controller.general.chatbot_controller import router as chatbot_router
 from app.controller.general.airtime_controller import router as airtime_router
 from app.controller.general.mobile_data import router as mobile_data_router
 from app.controller.general.cable_controller import router as cable_router
@@ -26,6 +27,7 @@ from app.mcp_server import create_mcp_app
 
 _USER_TAGS = {
     "User Authentication",
+    "Chatbot",
     "Airtime",
     "Mobile Data",
     "Cable TV",
@@ -96,6 +98,7 @@ def create_app() -> FastAPI:
 
     prefix = app_settings.API_VERSION
     app.include_router(user_auth_router, prefix=prefix)
+    app.include_router(chatbot_router, prefix=prefix)
     app.include_router(admin_auth_router, prefix=prefix)
     app.include_router(admin_router, prefix=prefix)
     app.include_router(admin_users_router, prefix=prefix)

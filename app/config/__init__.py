@@ -15,7 +15,12 @@ IS_PRODUCTION = os.getenv("ENVIRONMENT", "development").lower() == "production"
 class AppSettings(BaseSettings):
     """Application settings loaded from environment variables with production-ready defaults."""
 
-    model_config = SettingsConfigDict(env_file=".env", case_sensitive=True)
+    # extra="ignore": LangSmith tracing vars (LANGSMITH_*) and similar
+    # library-native env vars can live in .env without AppSettings needing a
+    # field for each — those libraries read os.environ directly.
+    model_config = SettingsConfigDict(
+        env_file=".env", case_sensitive=True, extra="ignore"
+    )
 
     # JWT Authentication
     ACCESS_TOKEN_EXPIRES: int = Field(
@@ -70,6 +75,14 @@ class AppSettings(BaseSettings):
 
     # Redis settings
     REDIS_URI: str = Field(..., description="Redis connection URI")
+
+    # Chatbot agent settings
+    # Optional (default "") so the rest of the app keeps working without an
+    # Anthropic key configured; the agent itself fails fast when actually invoked.
+    ANTHROPIC_API_KEY: str = Field("", description="Anthropic API key for the chatbot agent")
+    AGENT_MODEL: str = Field(
+        "claude-haiku-4-5", description="Anthropic model ID used by the chatbot agent"
+    )
 
     # Environment
     ENVIRONMENT: str = Field(
