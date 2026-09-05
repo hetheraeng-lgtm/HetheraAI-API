@@ -16,6 +16,7 @@ from .interfaces import (
     BuyElectricityData,
     BuyMobileDataData,
     FlattenedVtpassResponse,
+    VtpassContent,
     VtpassOptions,
     VtpassResponse,
     VerifyMeterNumberData,
@@ -277,6 +278,12 @@ class VtpassService:
     # --- helpers ---
 
     def _flatten_response(self, res: VtpassResponse) -> FlattenedVtpassResponse:
+        if not isinstance(res.content, VtpassContent):
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Unexpected VTPass response format",
+            )
+
         tx = res.content.transactions
         td = res.transaction_date
         transaction_date = getattr(td, "date", None) or str(td)
@@ -292,7 +299,7 @@ class VtpassService:
             unique_element=tx.unique_element,
             commission=tx.commission,
             total_amount=tx.total_amount,
-            amount=float(res.amount),
+            amount=float(res.amount) if res.amount is not None else None,
             unit_price=tx.unit_price,
             quantity=tx.quantity,
             status=tx.status,

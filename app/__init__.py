@@ -22,6 +22,7 @@ from app.controller.general.card_controller import router as card_router
 from app.controller.general.beneficiary_controller import router as beneficiary_router
 from app.controller.general.vtpass_controller import router as vtpass_router
 from app.controller.general.paystack_controller import router as paystack_router
+from app.mcp_server import create_mcp_app
 
 _USER_TAGS = {
     "User Authentication",
@@ -80,12 +81,17 @@ def _swagger_page(openapi_url: str, title: str) -> HTMLResponse:
 
 
 def create_app() -> FastAPI:
+    # FastMCP's ASGI app owns its own startup/shutdown (session manager, etc.),
+    # so FastAPI's lifespan must delegate to it for the mounted MCP routes to work.
+    mcp_app = create_mcp_app()
+
     app = FastAPI(
         title=app_settings.APP_NAME.capitalize(),
         description=f"{app_settings.APP_NAME.capitalize()}'s API documentation",
         docs_url=None,
         openapi_url="/openapi.json",
         middleware=middlewares,
+        lifespan=mcp_app.lifespan,
     )
 
     prefix = app_settings.API_VERSION
@@ -124,6 +130,13 @@ def create_app() -> FastAPI:
 
     # ── Swagger UI pages ──────────────────────────────────────────────────────
 
+    @app.get("/")
+    @app.get("")
+    async def welcome_page() -> HTMLResponse:
+        return HTMLResponse(
+            "<h1>Welcome to Hethera Utilities API</h1><p>Use the /docs endpoint to explore the API documentation.</p>"
+        )
+
     @app.get("/docs", include_in_schema=False)
     async def swagger_full() -> HTMLResponse:
         return _swagger_page("/openapi.json", f"{app_settings.APP_NAME} — Full")
@@ -135,5 +148,8 @@ def create_app() -> FastAPI:
     @app.get("/docs/admin", include_in_schema=False)
     async def swagger_admin() -> HTMLResponse:
         return _swagger_page("/openapi/admin.json", f"{app_settings.APP_NAME} — Admin")
+
+    # Mounted last: only handles paths not matched by the routers/routes above (serves /mcp).
+    app.mount("/", mcp_app)
 
     return app
