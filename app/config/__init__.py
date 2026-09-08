@@ -83,6 +83,13 @@ class AppSettings(BaseSettings):
     AGENT_MODEL: str = Field(
         "claude-haiku-4-5", description="Anthropic model ID used by the chatbot agent"
     )
+    AGENT_IDLE_TIMEOUT_MINUTES: int = Field(
+        240,
+        description=(
+            "Minutes of inactivity before a chat's remembered history expires "
+            "and the next message starts a fresh conversation."
+        ),
+    )
 
     # Environment
     ENVIRONMENT: str = Field(

@@ -1,4 +1,3 @@
-from typing import Optional
 import uuid
 from app.schema.common import (
     ALL_PROVIDERS,
@@ -8,7 +7,7 @@ from app.schema.common import (
     DATA_PROVIDERS,
 )
 from datetime import datetime
-from decimal import Decimal
+from decimal import Decimal, InvalidOperation
 from uuid import uuid4
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
@@ -35,6 +34,28 @@ _IDEMPOTENCY = Field(
     json_schema_extra=uuid_schema_extra,
 )
 
+
+def _coerce_decimal_amount(v: object) -> object:
+    """Accept a plain JSON number/string for a Decimal amount field.
+
+    JSON has no Decimal type, so any caller sending amount over JSON — the
+    MCP tool-calling path included, which runs FastMCP's strict input
+    validation (app/mcp_server/server.py) — can only ever send an int, float,
+    or numeric string. Pydantic's strict mode rejects those outright for a
+    Decimal field (it requires an actual Decimal instance), even with
+    `Field(strict=False)` on the field itself; a `mode="before"` validator
+    runs ahead of that check regardless of strict mode, so converting here is
+    the reliable fix. Non-Decimal, non-numeric input is passed through
+    unchanged so pydantic's own error message still reports it.
+    """
+    if isinstance(v, (int, float, str)) and not isinstance(v, bool):
+        try:
+            return Decimal(str(v))
+        except InvalidOperation:
+            pass
+    return v
+
+
 # ── Purchase request schemas ─────────────────────────────────────────────────
 
 
@@ -43,6 +64,11 @@ class AirtimePurchaseRequest(BaseModel):
     phone: str = Field(..., examples=["08119995541", "08111111111"])
     amount: Decimal = Field(gt=49, decimal_places=2)
     idempotency_key: str = _IDEMPOTENCY
+
+    @field_validator("amount", mode="before")
+    @classmethod
+    def coerce_amount(cls, v: object) -> object:
+        return _coerce_decimal_amount(v)
 
     @field_validator("phone", mode="before")
     @classmethod
@@ -101,6 +127,11 @@ class ElectricityPurchaseRequest(BaseModel):
     meter_type: str = Field(pattern=r"^(prepaid|postpaid)$")
     amount: Decimal = Field(ge=500, decimal_places=2)
     idempotency_key: str = _IDEMPOTENCY
+
+    @field_validator("amount", mode="before")
+    @classmethod
+    def coerce_amount(cls, v: object) -> object:
+        return _coerce_decimal_amount(v)
 
     @field_validator("service_id", mode="before")
     @classmethod

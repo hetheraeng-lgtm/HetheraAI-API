@@ -1,9 +1,7 @@
-import uuid
-
 from app.mcp_server.db import session_scope
 from app.mcp_server.errors import translate_errors
 from app.mcp_server.server import mcp
-from app.mcp_server.types import ChatId
+from app.mcp_server.types import ChatId, UUIDParam
 from app.mcp_server.users import resolve_user
 from app.schema.transaction import (
     BeneficiaryCreateRequest,
@@ -46,7 +44,7 @@ async def add_beneficiary(
 
 @mcp.tool
 async def update_beneficiary(
-    chat_id: ChatId, beneficiary_id: uuid.UUID, payload: BeneficiaryUpdateRequest
+    chat_id: ChatId, beneficiary_id: UUIDParam, payload: BeneficiaryUpdateRequest
 ) -> BeneficiaryResponse:
     """Update the name, identifier, or service_id of a saved beneficiary."""
     async with session_scope() as session:
@@ -64,7 +62,7 @@ async def update_beneficiary(
 
 
 @mcp.tool
-async def delete_beneficiary(chat_id: ChatId, beneficiary_id: uuid.UUID) -> None:
+async def delete_beneficiary(chat_id: ChatId, beneficiary_id: UUIDParam) -> None:
     """Soft-delete a saved beneficiary."""
     async with session_scope() as session:
         user = await resolve_user(session, chat_id)

@@ -9,6 +9,13 @@ duplicates bill-payment data or service logic itself.
 to the mcp<2 wire format while fastmcp>=4.0.2 requires mcp>=2.0 for its
 in-process client, so the two can't be installed together. The adapter below
 covers only what this project needs from that library.
+
+Every registered MCP tool is exposed here, including purchase/write ones
+(buy_*, add_*, update_*, delete_*, initialize_*) — there is currently no
+confirm-before-charge step between the model deciding to call one of these
+and it actually running. That's a deliberate, temporary tradeoff to unblock
+write access now; add a confirmation gate here (or in the graph, before the
+tools node executes) before relying on this for anything beyond testing.
 """
 
 import json
@@ -20,22 +27,24 @@ from fastmcp.client.client import CallToolResult
 from langchain_core.tools import StructuredTool
 from mcp import types as mcp_types
 
-# Tool names following this project's MCP naming convention (see
-# app/mcp_server/tools/*.py) that only read data — no money moves, no writes.
-# The chat agent is limited to these until purchase flows get an explicit
-# confirmation step; exposing a new read-only tool to the agent needs no
-# change here, and lifting this restriction for a write tool is a one-line
-# addition to this tuple, not a redesign.
-_READ_ONLY_PREFIXES = ("list_", "get_")
+# # Tool names following this project's MCP naming convention (see
+# # app/mcp_server/tools/*.py) that only read data — no money moves, no writes.
+# # The chat agent is limited to these until purchase flows get an explicit
+# # confirmation step; exposing a new read-only tool to the agent needs no
+# # change here, and lifting this restriction for a write tool is a one-line
+# # addition to this tuple, not a redesign.
+# _READ_ONLY_PREFIXES = ("list_", "get_")
 
 
-def _is_read_only(tool: mcp_types.Tool) -> bool:
-    return tool.name.startswith(_READ_ONLY_PREFIXES)
+# def _is_read_only(tool: mcp_types.Tool) -> bool:
+#     return tool.name.startswith(_READ_ONLY_PREFIXES)
 
 
 def _text_content(result: CallToolResult) -> str:
     return "\n".join(
-        block.text for block in result.content if isinstance(block, mcp_types.TextContent)
+        block.text
+        for block in result.content
+        if isinstance(block, mcp_types.TextContent)
     )
 
 
@@ -66,7 +75,9 @@ def _build_call(
     return _call
 
 
-def _to_langchain_tool(client: Client, tool: mcp_types.Tool, chat_id: str) -> StructuredTool:
+def _to_langchain_tool(
+    client: Client, tool: mcp_types.Tool, chat_id: str
+) -> StructuredTool:
     schema: dict[str, Any] = dict(tool.input_schema)
     properties: dict[str, Any] = dict(schema.get("properties", {}))
     injects_chat_id = "chat_id" in properties
@@ -90,6 +101,7 @@ def _to_langchain_tool(client: Client, tool: mcp_types.Tool, chat_id: str) -> St
 
 
 async def build_langchain_tools(client: Client, chat_id: str) -> list[StructuredTool]:
-    """List the connected FastMCP server's read-only tools as LangChain tools."""
+    """List every one of the connected FastMCP server's tools as LangChain tools."""
     tools = await client.list_tools()
-    return [_to_langchain_tool(client, tool, chat_id) for tool in tools if _is_read_only(tool)]
+    # return [_to_langchain_tool(client, tool, chat_id) for tool in tools if _is_read_only(tool)]
+    return [_to_langchain_tool(client, tool, chat_id) for tool in tools]

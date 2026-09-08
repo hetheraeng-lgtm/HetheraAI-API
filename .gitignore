@@ -13,5 +13,7 @@ wheels/
 .env
 try*.sh
 .db-volume
+.redis-volume
 scrape.py
 .pytest_cache/
+.ruff_cache

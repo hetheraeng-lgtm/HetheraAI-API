@@ -15,3 +15,5 @@ try*.sh
 .db-volume
 scrape.py
 .pytest_cache/
+notebook
+.ruff_cache
