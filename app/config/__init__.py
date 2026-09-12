@@ -91,6 +91,32 @@ class AppSettings(BaseSettings):
         ),
     )
 
+    # WhatsApp Cloud API settings
+    # All optional (default "") so the app keeps working without WhatsApp
+    # configured; the webhook only fails at the specific step that needs the
+    # missing value (verification, or sending a reply).
+    WHATSAPP_VERIFY_TOKEN: str = Field(
+        "", description="Shared secret Meta sends back during webhook verification"
+    )
+    WHATSAPP_APP_SECRET: str = Field(
+        "",
+        description=(
+            "Meta App Secret used to verify the X-Hub-Signature-256 header on "
+            "every incoming webhook POST. Unlike the other WhatsApp settings, "
+            "this one has no safe default — if it's unset, the webhook rejects "
+            "every message rather than accepting unverified payloads."
+        ),
+    )
+    WHATSAPP_ACCESS_TOKEN: str = Field(
+        "", description="Meta Graph API access token, used to send messages back"
+    )
+    WHATSAPP_PHONE_NUMBER_ID: str = Field(
+        "", description="WhatsApp Business phone number ID messages are sent from"
+    )
+    WHATSAPP_API_VERSION: str = Field(
+        "v21.0", description="Meta Graph API version for the WhatsApp send-message call"
+    )
+
     # Environment
     ENVIRONMENT: str = Field(
         "development", description="Environment (development, staging, production)"
