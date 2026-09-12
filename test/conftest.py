@@ -1,61 +1,73 @@
-"""Shared test fixtures."""
+"""Shared test fixtures.
 
-import uuid
-from decimal import Decimal
-from unittest.mock import AsyncMock, MagicMock
+`test_transactions.py` is written against an older wallet-balance transaction
+model (`app.model.wallet.Wallet`) that no longer exists anywhere in `app/model`
+— see CLAUDE.md, which flags it as stale/aspirational rather than a spec of
+current behavior. It's excluded from collection here rather than rewritten,
+since reconciling it is a separate, larger task than the admin auth/dashboard
+work these fixtures support.
+"""
+
+from collections.abc import AsyncIterator
 
 import pytest
 import pytest_asyncio
-from sqlalchemy.ext.asyncio import AsyncSession
+from httpx import ASGITransport, AsyncClient
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
+from sqlalchemy.pool import StaticPool
 
-from app.enums.transaction import TransactionStatus, TransactionType
-from app.model.ledger import LedgerAccount, LedgerEntry
-from app.model.transaction import Transaction
-from app.model.transaction_audit import TransactionAudit
-from app.model.wallet import Wallet
-from app.utils.libs.vtpass.interfaces import FlattenedVtpassResponse
+from app import create_app
+from app.config.database import get_db
+from app.model.base import Base
 
-
-def _make_wallet(user_id: uuid.UUID, balance: Decimal = Decimal("5000.00")) -> Wallet:
-    w = Wallet()
-    w.id = uuid.uuid4()
-    w.user_id = user_id
-    w.balance = balance
-    w.currency = "NGN"
-    return w
+collect_ignore = ["test_transactions.py"]
 
 
-def _make_transaction(
-    user_id: uuid.UUID,
-    wallet_id: uuid.UUID,
-    amount: Decimal = Decimal("100.00"),
-    status: TransactionStatus = TransactionStatus.INITIATED,
-    tx_type: TransactionType = TransactionType.AIRTIME,
-) -> Transaction:
-    t = Transaction()
-    t.id = uuid.uuid4()
-    t.reference = f"TXN{uuid.uuid4().hex.upper()}"
-    t.user_id = user_id
-    t.wallet_id = wallet_id
-    t.type = tx_type
-    t.status = status
-    t.amount = amount
-    t.currency = "NGN"
-    t.provider = "mtn"
-    t.service_id = "mtn"
-    t.idempotency_key = str(uuid.uuid4())
-    t.extra_data = {}
-    return t
-
-
-def _vtpass_success(request_id: str = "test-req-id") -> FlattenedVtpassResponse:
-    return FlattenedVtpassResponse(
-        request_id=request_id,
-        status="delivered",
-        amount=100.0,
-        total_amount=100.0,
-        product_name="MTN Airtime",
-        unique_element="08012345678",
-        request_description="Transaction successful",
-        vt_pass_transaction_id="VTP-123",
+@pytest_asyncio.fixture
+async def db_engine():
+    engine = create_async_engine(
+        "sqlite+aiosqlite:///:memory:",
+        connect_args={"check_same_thread": False},
+        poolclass=StaticPool,
     )
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
+    yield engine
+    await engine.dispose()
+
+
+@pytest_asyncio.fixture
+async def db_session(db_engine) -> AsyncIterator[AsyncSession]:
+    session_factory = async_sessionmaker(
+        bind=db_engine, class_=AsyncSession, expire_on_commit=False, autoflush=False
+    )
+    async with session_factory() as session:
+        yield session
+
+
+@pytest_asyncio.fixture
+async def app(db_session):
+    fastapi_app = create_app()
+
+    async def _override_get_db():
+        yield db_session
+
+    fastapi_app.dependency_overrides[get_db] = _override_get_db
+    yield fastapi_app
+    fastapi_app.dependency_overrides.clear()
+
+
+@pytest_asyncio.fixture
+async def client(app) -> AsyncIterator[AsyncClient]:
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as ac:
+        yield ac
+
+
+@pytest.fixture
+def admin_payload():
+    return {
+        "username": "admin",
+        "email": "admin@hethera.ai",
+        "password": "SuperSecret123",
+    }

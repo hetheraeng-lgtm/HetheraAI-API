@@ -13,6 +13,10 @@ from app.controller.admin.admin_controller import admin_router
 from app.controller.admin.admin_controller import (
     auth_router as admin_auth_router,
 )
+from app.controller.admin.dashboard_controller import router as admin_dashboard_router
+from app.controller.admin.transaction_controller import (
+    router as admin_transactions_router,
+)
 from app.controller.general.user_controller import auth_router as user_auth_router
 from app.controller.general.chatbot_controller import router as chatbot_router
 from app.controller.general.airtime_controller import router as airtime_router
@@ -41,6 +45,8 @@ _ADMIN_TAGS = {
     "Super Admin Authentication",
     "Super Admin Management",
     "User Management",
+    "Admin Dashboard",
+    "Admin Transactions",
 }
 
 # Navigation bar injected at the top of every Swagger UI page
@@ -100,8 +106,13 @@ def create_app() -> FastAPI:
     app.include_router(user_auth_router, prefix=prefix)
     app.include_router(chatbot_router, prefix=prefix)
     app.include_router(admin_auth_router, prefix=prefix)
-    app.include_router(admin_router, prefix=prefix)
+    # More specific /admin/* routers must be registered before admin_router,
+    # whose GET /admin/{admin_id} would otherwise greedily match any single
+    # path segment (e.g. /admin/transactions, /admin/users) as an admin_id.
+    app.include_router(admin_dashboard_router, prefix=prefix)
+    app.include_router(admin_transactions_router, prefix=prefix)
     app.include_router(admin_users_router, prefix=prefix)
+    app.include_router(admin_router, prefix=prefix)
     app.include_router(airtime_router, prefix=prefix)
     app.include_router(mobile_data_router, prefix=prefix)
     app.include_router(cable_router, prefix=prefix)

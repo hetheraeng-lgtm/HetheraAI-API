@@ -1,3 +1,5 @@
+import hashlib
+import secrets
 from datetime import datetime, timedelta, timezone
 from typing import Any
 
@@ -36,3 +38,16 @@ def decode_access_token(token: str) -> str:
     )
 
     return str(payload["sub"])
+
+
+def create_refresh_token() -> str:
+    """A high-entropy opaque token — unlike the access token, it's not a JWT,
+    just a random secret whose (hashed) value is looked up in the DB so it
+    can be individually revoked/rotated."""
+    return secrets.token_urlsafe(48)
+
+
+def hash_token(token: str) -> str:
+    """SHA-256 hex digest, used both to store a refresh token and to look it
+    up again — the raw token itself is never persisted."""
+    return hashlib.sha256(token.encode()).hexdigest()

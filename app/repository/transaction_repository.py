@@ -97,3 +97,11 @@ class TransactionAuditRepository(BaseRepository[TransactionAudit]):
             actor=actor,
         )
         return await self.add(audit)
+
+    async def get_for_transaction(self, transaction_id: uuid.UUID) -> list[TransactionAudit]:
+        result = await self.session.execute(
+            select(TransactionAudit)
+            .where(TransactionAudit.transaction_id == transaction_id)
+            .order_by(TransactionAudit.created_at.asc())
+        )
+        return list(result.scalars().all())

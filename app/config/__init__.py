@@ -29,6 +29,9 @@ class AppSettings(BaseSettings):
     ALGORITHM: str = Field("HS256", description="JWT algorithm")
     SECRET_KEY: str = Field(..., description="Secret key for JWT encoding/decoding")
     RESET_TOKEN_EXPIRY_HOURS: float = Field(..., description="Reset token expiry hours")
+    REFRESH_TOKEN_EXPIRES_DAYS: int = Field(
+        7, description="Admin refresh token expiration time in days"
+    )
 
     # CORS settings
     ALLOWED_ORIGINS: List[str] = Field(

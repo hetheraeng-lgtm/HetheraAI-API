@@ -10,6 +10,8 @@ from app.model.super_admin import SuperAdmin
 from app.repository.super_admin_repository import SuperAdminRepository
 from app.schema.common import ApiResponse
 from app.schema.super_admin import (
+    AdminLoginRequest,
+    RefreshTokenRequest,
     SuperAdminCreate,
     SuperAdminResponse,
     SuperAdminUpdate,
@@ -50,11 +52,76 @@ async def login(
 
 
 @auth_router.post(
+    "/login",
+    response_model=ApiResponse[TokenResponse],
+    summary="Admin login (dashboard)",
+    description="JSON email + password login for the admin dashboard frontend. Returns an access token and a refresh token.",
+)
+async def login_json(
+    payload: AdminLoginRequest,
+    service: SuperAdminService = Depends(_get_admin_service),
+) -> ApiResponse[TokenResponse]:
+    access_token, refresh_token, expires_in = await service.login(
+        payload.email, payload.password
+    )
+    return ApiResponse(
+        message="Login successful",
+        data=TokenResponse(
+            access_token=access_token,
+            refresh_token=refresh_token,
+            expires_in=expires_in,
+        ),
+    )
+
+
+@auth_router.post(
+    "/refresh",
+    response_model=ApiResponse[TokenResponse],
+    summary="Refresh an admin access token",
+    description="Exchanges a valid, unexpired refresh token for a new access/refresh token pair. Refresh tokens are single-use (rotated on each call).",
+)
+async def refresh_token(
+    payload: RefreshTokenRequest,
+    service: SuperAdminService = Depends(_get_admin_service),
+) -> ApiResponse[TokenResponse]:
+    access_token, new_refresh_token, expires_in = await service.refresh(
+        payload.refresh_token
+    )
+    return ApiResponse(
+        message="Token refreshed successfully",
+        data=TokenResponse(
+            access_token=access_token,
+            refresh_token=new_refresh_token,
+            expires_in=expires_in,
+        ),
+    )
+
+
+@auth_router.post(
+    "/logout",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="Admin logout",
+    description="Revokes the given refresh token so it can no longer be used to obtain new access tokens.",
+)
+async def logout(
+    payload: RefreshTokenRequest,
+    service: SuperAdminService = Depends(_get_admin_service),
+) -> None:
+    await service.logout(payload.refresh_token)
+
+
+@auth_router.post(
     "/register",
     response_model=ApiResponse[SuperAdminResponse],
     status_code=status.HTTP_201_CREATED,
-    summary="Register a new super admin",
-    description="Creates a super admin account. Protect this endpoint in production by adding `get_current_super_admin` as a dependency.",
+    summary="Register the (only) super admin",
+    description=(
+        "Creates the super admin account. Only one admin account may ever exist: "
+        "this endpoint succeeds exactly once (enforced both by an application-level "
+        "check and a DB-level unique constraint on the admin table), and returns "
+        "409 Conflict on every subsequent call. Safe to leave unauthenticated since "
+        "it is self-limiting."
+    ),
 )
 async def register(
     payload: SuperAdminCreate,
